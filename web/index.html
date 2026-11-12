@@ -44,6 +44,17 @@ details{margin:20px 0}.foot{font-size:13px;color:#a6bed7;margin-top:20px}
 <tbody id="rows"><tr><td colspan="7">Carregando...</td></tr></tbody></table></div>
 </div>
 <details class="panel">
+<summary><strong>Importar voos conferidos no site da Aena (CSV)</strong> <span class="chip">Dados manuais, não ao vivo</span></summary>
+<p>Abra a página oficial da Aena, confira os dados que você pode utilizar e transcreva-os para CSV. Não há conexão automática, validação oficial ou atualização contínua. Os registros serão salvos no SQLite do Codespaces.</p>
+<label>Data operacional (AAAA-MM-DD)<input id="aena-date" type="date" value="2026-11-11"></label>
+<p>Colunas: <code>flight_number,direction,scheduled_local,estimated_local,route,status,terminal</code>. Para <code>direction</code>, use <code>departure</code> (partida) ou <code>arrival</code> (chegada).</p>
+<textarea id="aena-csv" spellcheck="false">flight_number,direction,scheduled_local,estimated_local,route,status,terminal
+GLO1234,departure,10:15,10:45,Brasilia,Atrasado,T1
+TAM5678,arrival,11:20,,Rio de Janeiro,Previsto,T1</textarea>
+<p><button id="import-aena" type="button">Salvar dados conferidos no painel</button></p>
+<p id="aena-message" role="status"></p>
+</details>
+<details class="panel">
 <summary><strong>Importar amostra manual em JSON</strong> <span class="chip">Somente testes</span></summary>
 <p>Transcreva somente dados que você tenha autorização para usar. Os campos <code>scheduled_local</code> e <code>estimated_local</code> representam horários locais (HH:MM), não UTC. O importador não faz coleta automática da página oficial.</p>
 <textarea id="payload" spellcheck="false">{
