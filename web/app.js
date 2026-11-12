@@ -39,6 +39,20 @@ async function refresh() {
 const update = () => refresh().catch(e => { $("message").textContent = e.message; });
 for (const id of ["mode","direction","search"]) $(id).addEventListener(id === "search" ? "input" : "change", update);
 $("refresh").addEventListener("click", update);
+$("import-aena").addEventListener("click", async () => {
+  $("aena-message").textContent = "Importando...";
+  try {
+    const res = await fetch("/api/v1/aena-csv", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({flight_date:$("aena-date").value,csv:$("aena-csv").value})
+    });
+    const info = await res.json();
+    if (!res.ok) throw new Error(info.error || "Importação rejeitada");
+    $("aena-message").textContent = info.imported + " registros salvos no servidor. Origem: transcrição manual não verificada.";
+    $("mode").value = "manual";
+    await refresh();
+  } catch (e) { $("aena-message").textContent = "Erro: " + e.message; }
+});
 $("import").addEventListener("click", async () => {
   $("message").textContent = "Validando...";
   try {
@@ -46,7 +60,7 @@ $("import").addEventListener("click", async () => {
     const res = await fetch("/api/v1/manual-import", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
     const info = await res.json();
     if (!res.ok) throw new Error(info.error || "Falha ao importar");
-    $("message").textContent = info.imported + " registros importados. Somente memória desta sessão; não persistidos.";
+    $("message").textContent = info.imported + " registros importados e salvos no SQLite do servidor.";
     $("mode").value = "manual";
     await refresh();
   } catch (e) { $("message").textContent = "Erro: " + e.message; }
