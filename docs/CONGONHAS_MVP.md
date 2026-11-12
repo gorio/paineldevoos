@@ -35,3 +35,40 @@ O MVP não tem autenticação, persistência, autorização de multiusuário ou 
 3. Base PostgreSQL, operação por dia e logs de coleta.
 4. Conciliação RPL com observação pública, registrando ambiguidades.
 5. Deploy autenticado/seguro para testadores externos.
+
+## V0.2 — Captura manual do quadro de voos da Aena
+
+A interface inclui uma seção de importação CSV para digitar/transcrever uma amostra conferida na página oficial da Aena. Os valores preenchidos inicialmente no exemplo são **inventados** e não refletem voos reais. A aplicação **não coleta a página**; nenhuma conexão ou permissão de API Aena foi confirmada. Não chame isso de tempo real.
+
+1. No site Aena, confira voo, direção (chegada ou partida), hora programada, hora estimada, rota, status e terminal.
+2. Na tela do Painel de Voos, expanda **Importar voos conferidos no site da Aena (CSV)**.
+3. Escolha a data e substitua as linhas fictícias por dados que você tenha direito de utilizar.
+4. Clique **Salvar dados conferidos no painel**.
+5. Selecione **Importação manual** em **Origem dos dados**. A informação é persistida no SQLite do Codespace e fica identificada como **Transcrição CSV manual (não verificada)**.
+
+O CSV deve conter exatamente este cabeçalho:
+
+```csv
+flight_number,direction,scheduled_local,estimated_local,route,status,terminal
+GLO1234,departure,10:15,10:45,Destino de exemplo,Atrasado,T1
+```
+
+O endpoint `POST /api/v1/aena-csv` recebe `{"flight_date":"AAAA-MM-DD","csv":"..."}` e faz validação antes de salvar. O SQLite padrão fica em `data/painel.sqlite3` (ignorado pelo Git); os dados sobrevivem ao reinício da aplicação **enquanto o armazenamento persistente do Codespace for conservado**. Não é backup de produção.
+
+Para atualizar a sua Codespace, abra **Terminal**, interrompa o servidor usando `Ctrl+C` e execute:
+
+```bash
+git switch main
+git pull --ff-only
+python3 -m unittest discover -s tests -v
+python3 -m app.server
+```
+
+Se houver modificações locais, pare antes de executar `git pull` para não perdê-las.
+
+### Novas fontes oficiais pesquisadas
+
+- [Aena Congonhas](https://www.aenabrasil.com.br/pt/aeroportos/aeroporto-de-congonhas/informacoes-de-voos.html): página operacional, integração automática não validada.
+- [SIROS ANAC](https://siros.anac.gov.br/SIROS/view/registro/frmConsultaVoos): voos **programados**, não status operacional; o portal menciona webservice, que depende de avaliação de acesso/termos.
+
+Próxima tarefa: conseguir acesso programático permitido e documentado ao dado de voos operacionais, e então implementar atualizações agendadas com políticas de requisição, auditoria e tratamento de indisponibilidade.
