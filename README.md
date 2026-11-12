@@ -29,3 +29,15 @@ Abra uma Issue descrevendo a melhoria desejada. Mudanças devem entrar por branc
 5. Publicar painel com indicação explícita da proveniência e atualização dos dados.
 
 Projeto em desenvolvimento. Licença de código e condições de redistribuição dos dados serão avaliadas separadamente.
+
+## MVP Congonhas (testável)
+
+O primeiro protótipo funcional está em `app/` (API Python) e `web/` (painel).
+Inclui busca, filtros, indicadores, dados sintéticos explicitamente identificados
+e importação manual validada de uma amostra JSON (não em tempo real).
+
+**Sem instalar ou baixar:** abra [GitHub Codespaces](https://github.com/codespaces/new?hide_repo_select=true&repo=gorio/paineldevoos)
+e execute `python3 -m app.server`. Depois abra a porta 8000 em modo **Private**.
+Consulte [o guia do MVP](docs/CONGONHAS_MVP.md) para detalhes e limitações.
+
+**Atenção:** não existe integração automática autorizada com a Aena nesta versão.
