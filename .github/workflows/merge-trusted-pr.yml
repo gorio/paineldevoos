@@ -1,0 +1,63 @@
+name: Merge trusted PR after successful CI
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge owner PRs only, with immutable head SHA
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const run = context.payload.workflow_run;
+            const trustedOwner = 'gorio';
+
+            for (const entry of run.pull_requests || []) {
+              const { data: pr } = await github.rest.pulls.get({
+                owner, repo, pull_number: entry.number
+              });
+
+              if (pr.state !== 'open' || pr.draft ||
+                  pr.base.ref !== 'main' ||
+                  pr.user.login !== trustedOwner ||
+                  pr.head.repo?.full_name !== `${owner}/${repo}` ||
+                  pr.head.sha !== run.head_sha) {
+                core.info(`Skipping PR #${entry.number}: not an eligible trusted PR`);
+                continue;
+              }
+
+              const changed = await github.paginate(github.rest.pulls.listFiles, {
+                owner, repo, pull_number: pr.number, per_page: 100
+              });
+
+              if (changed.some(file =>
+                file.filename.startsWith('.github/workflows/') ||
+                file.filename === 'CODEOWNERS' ||
+                file.filename.endsWith('/CODEOWNERS') ||
+                file.filename === 'SECURITY.md')) {
+                core.info(`Skipping PR #${pr.number}: sensitive files require manual review`);
+                continue;
+              }
+
+              try {
+                const { data } = await github.rest.pulls.merge({
+                  owner, repo, pull_number: pr.number,
+                  merge_method: 'squash',
+                  sha: pr.head.sha
+                });
+                core.info(`Merged PR #${pr.number}: ${data.sha}`);
+              } catch (e) {
+                core.warning(`PR #${pr.number} was not merged: ${e.message}`);
+              }
+            }
