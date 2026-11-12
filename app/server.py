@@ -7,6 +7,8 @@ import json
 import os
 
 from .core import SOURCE_URL, InvalidFlight, demo_payload, flight_record, normalize_payload, now_utc
+from .aena_csv import parse_aena_csv
+from .storage import load_import, save_import
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -21,12 +23,19 @@ def snapshot(mode="demo", direction=None, search=""):
     if mode not in ("demo", "manual"):
         raise InvalidFlight("mode deve ser demo ou manual.")
     with _state_lock:
-        payload = demo_payload() if mode == "demo" else _manual
-        collected = None if mode == "demo" else _manual_collected
+        stored = load_import() if mode == "manual" else None
+        payload = demo_payload() if mode == "demo" else (stored[0] if stored else _manual)
+        collected = None if mode == "demo" else (stored[1] if stored else _manual_collected)
+        source_id = stored[2] if stored else "manual_transcription"
     if payload is None:
         return {"airport": "SBSP", "mode": mode, "is_realtime": False,
                 "last_updated_at": None, "flight_date": None, "count": 0, "flights": []}
     records = [flight_record(f, payload["flight_date"], mode, collected) for f in payload["flights"]]
+    if mode == "manual":
+        for record in records:
+            record["source"]["id"] = source_id
+            if source_id == "aena_manual_csv":
+                record["source"]["name"] = "Transcrição CSV manual (não verificada)"
     if direction:
         if direction not in ("departure", "arrival"):
             raise InvalidFlight("direction inválida.")
@@ -59,6 +68,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, {"sources": [
                 {"id": "synthetic_demo", "status": "available", "is_realtime": False},
                 {"id": "manual_transcription", "status": "available", "is_realtime": False},
+                {"id": "aena_manual_csv", "status": "available", "is_realtime": False},
                 {"id": "aena_sbsp", "status": "not_connected", "url": SOURCE_URL, "is_realtime": False}]})
         if parsed.path == "/api/v1/flights":
             q = parse_qs(parsed.query)
@@ -89,7 +99,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         global _manual, _manual_collected
-        if urlsplit(self.path).path != "/api/v1/manual-import":
+        path = urlsplit(self.path).path
+        if path not in ("/api/v1/manual-import", "/api/v1/aena-csv"):
             return self.send_json(404, {"error": "not found"})
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.send_json(415, {"error": "Content-Type deve ser application/json"})
@@ -100,14 +111,24 @@ class Handler(BaseHTTPRequestHandler):
         if length < 0 or length > MAX_REQUEST:
             return self.send_json(413, {"error": "Corpo excede limite ou não informado"})
         try:
-            payload = normalize_payload(json.loads(self.rfile.read(length)))
+            posted = json.loads(self.rfile.read(length))
+            if path == "/api/v1/aena-csv":
+                if not isinstance(posted, dict) or set(posted) != {"flight_date", "csv"}:
+                    raise InvalidFlight("Enviar flight_date e csv.")
+                payload = parse_aena_csv(posted["csv"], posted["flight_date"])
+            else:
+                payload = normalize_payload(posted)
         except (UnicodeDecodeError, json.JSONDecodeError, InvalidFlight) as exc:
             return self.send_json(400, {"error": str(exc)})
+        timestamp = now_utc()
+        source_id = "aena_manual_csv" if path == "/api/v1/aena-csv" else "manual_transcription"
+        save_import(payload, timestamp, source_id)
         with _state_lock:
             _manual = payload
-            _manual_collected = now_utc()
+            _manual_collected = timestamp
         return self.send_json(200, {"imported": len(payload["flights"]), "mode": "manual",
-                                    "last_updated_at": _manual_collected, "is_realtime": False})
+                                    "source_id": source_id,
+                                    "last_updated_at": timestamp, "is_realtime": False})
 
     def log_message(self, format, *args):
         pass
