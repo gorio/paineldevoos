@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel de Voos · Congonhas SBSP</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#eaf3ff;background:#101a2a}*{box-sizing:border-box}body{margin:0}
+header{padding:22px max(20px,calc((100vw - 1180px)/2));background:#15243b;border-bottom:1px solid #30425e}
+main{max-width:1180px;margin:auto;padding:24px 18px 60px}h1{margin:6px 0;font-size:clamp(26px,4vw,38px)}h2{font-size:20px}
+small,.muted{color:#aac0d8}a{color:#8bd7ff}p{line-height:1.6}
+.warn{background:#3a2f1b;border:1px solid #9d7829;color:#ffdf90;border-radius:10px;padding:13px 16px;margin:18px 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:20px 0}
+.stat,.panel{background:#19283e;border:1px solid #30445f;border-radius:13px;padding:16px}.stat strong{display:block;font-size:30px;margin-top:5px}
+.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:18px 0}
+label{display:grid;gap:6px;font-size:13px;color:#c8d7e8}select,input,textarea,button{background:#102036;color:#f5faff;border:1px solid #46617e;border-radius:8px;padding:10px;font:inherit}
+button{background:#1479b8;border-color:#1479b8;cursor:pointer;font-weight:600}button:hover{background:#198bd2}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th{text-align:left;font-size:12px;color:#b0c6de;letter-spacing:.03em}
+th,td{padding:13px 10px;border-bottom:1px solid #334962}td strong{font-variant-numeric:tabular-nums}
+.tag{display:inline-block;border-radius:7px;background:#324763;padding:5px 9px;color:#dbefff;font-size:12px}
+textarea{width:100%;min-height:170px;font-family:ui-monospace,monospace;font-size:13px}
+details{margin:20px 0}.foot{font-size:13px;color:#a6bed7;margin-top:20px}
+#message{min-height:20px} .chip{padding:4px 8px;border-radius:6px;background:#364e67;font-size:12px}
+</style>
+</head>
+<body>
+<header><small>PAINEL DE VOOS · MVP 0.1</small><h1>Congonhas <span style="color:#86d8ff">SBSP / CGH</span></h1>
+<span class="muted">Comparação operacional em construção · Horário local: America/Sao_Paulo</span></header>
+<main>
+<div class="warn"><strong>AMBIENTE DE TESTE — NÃO É TEMPO REAL.</strong> Os registros iniciais são fictícios. Dados importados manualmente não são verificados nem sincronizados automaticamente com a Aena.</div>
+<div class="stats">
+ <div class="stat"><small>Registros exibidos</small><strong id="count">—</strong></div>
+ <div class="stat"><small>Partidas</small><strong id="departures">—</strong></div>
+ <div class="stat"><small>Chegadas</small><strong id="arrivals">—</strong></div>
+ <div class="stat"><small>Data dos voos</small><strong id="date" style="font-size:20px">—</strong></div>
+</div>
+<div class="panel">
+<div class="controls">
+<label>Origem dos dados<select id="mode"><option value="demo">Demonstração sintética</option><option value="manual">Importação manual</option></select></label>
+<label>Movimento<select id="direction"><option value="">Todos</option><option value="departure">Partidas</option><option value="arrival">Chegadas</option></select></label>
+<label>Pesquisar voo/rota<input id="search" placeholder="Número ou destino"></label>
+<button id="refresh" type="button">Atualizar painel</button>
+</div>
+<p id="source" class="muted"></p><div class="tablewrap"><table><thead><tr><th>Previsto</th><th>Estimado</th><th>Voo</th><th>Operação</th><th>Origem / destino</th><th>Status informado</th><th>Terminal</th></tr></thead>
+<tbody id="rows"><tr><td colspan="7">Carregando...</td></tr></tbody></table></div>
+</div>
+<details class="panel">
+<summary><strong>Importar amostra manual em JSON</strong> <span class="chip">Somente testes</span></summary>
+<p>Transcreva somente dados que você tenha autorização para usar. Os campos <code>scheduled_local</code> e <code>estimated_local</code> representam horários locais (HH:MM), não UTC. O importador não faz coleta automática da página oficial.</p>
+<textarea id="payload" spellcheck="false">{
+  "flight_date": "2026-11-11",
+  "flights": [
+    {"flight_number":"ABC1234","direction":"departure","scheduled_local":"08:20","estimated_local":"08:35","route":"Destino de exemplo","status":"Atrasado","terminal":"T1"}
+  ]
+}</textarea>
+<p><button id="import" type="button">Importar para esta sessão do servidor</button></p><p id="message" role="status"></p>
+</details>
+<p class="foot">Fonte oficial para conferência: <a href="https://www.aenabrasil.com.br/pt/aeroportos/aeroporto-de-congonhas/informacoes-de-voos.html" target="_blank" rel="noopener noreferrer">Aena Brasil — informações de voos Congonhas</a>. A plataforma não tem integração oficial ativa; operações reais devem ser verificadas diretamente no operador.</p>
+</main><script src="/app.js" defer></script>
+</body></html>
